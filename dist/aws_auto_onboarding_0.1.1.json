@@ -116,7 +116,7 @@
 				"Policies": [
 					{
 						"PolicyName": "TrustMechanismLambdaPolicy",
-                        "PolicyDocument": 
+                        "PolicyDocument":
 						{
 							"Version": "2012-10-17",
 							"Statement": [
@@ -185,10 +185,10 @@
 								"ssm:DeleteParameter"
 							],
 							"Resource": "*"
-						}	
+						}
 					]
 				}
-			}	
+			}
 		},
 		"SafeHandlerLambdaRole": {
 			"Type": "AWS::IAM::Role",
@@ -272,7 +272,7 @@
 		  "Type" : "AWS::Lambda::Function",
 		  "Properties" : {
 			"Code" : {
-					  "S3Bucket" : {"Ref": "LambdasBucket"}, 
+					  "S3Bucket" : {"Ref": "LambdasBucket"},
 					  "S3Key" : "aws_ec2_auto_onboarding_0.1.1.zip"
                 },
 			"Description" : "Main Auto Onboarding Lambda",
@@ -336,20 +336,14 @@
             },
             "DependsOn": [
                 "SafeHandlerLambdaRole",
-                "SafehandlingLambdaPolicy",
-                "SafeHandlerLambda"
-            ],
-			"CreationPolicy": {
-                "ResourceSignal": {
-                    "Timeout": "PT2M"
-                }
-            }
+                "SafehandlingLambdaPolicy"
+            ]
         },
 		"SafeHandlerLambda": {
 		  "Type" : "AWS::Lambda::Function",
 		  "Properties" : {
 			"Code" : {
-					  "S3Bucket" : {"Ref": "LambdasBucket"}, 
+					  "S3Bucket" : {"Ref": "LambdasBucket"},
 					  "S3Key" : "aws_environment_setup_0.1.1.zip"
                 },
 			"Description" : "Environment initial setup Lambda",
@@ -367,7 +361,6 @@
 						}
 		  },
 		  "DependsOn": [
-                "SafeHandlerLambdaRole",
                 "SafehandlingLambdaPolicy"
             ]
 		},
@@ -382,10 +375,10 @@
 		},
 		"SecurityGroupPVWAIngress": {
 			"Type": "AWS::EC2::SecurityGroupIngress",
-			"Properties" : {   
+			"Properties" : {
 				"GroupId": {"Ref": "PVWASG"},
-				"FromPort": "443",
-				"ToPort": "443",
+				"FromPort": 443,
+				"ToPort": 443,
 				"IpProtocol": "tcp",
 				"SourceSecurityGroupId": {"Fn::GetAtt": ["ElasticityLambdaSecurityGroup", "GroupId"]}
 			}
@@ -406,8 +399,8 @@
                     "Ref": "ElasticityLambdaSecurityGroup"
                 },
                 "IpProtocol": "tcp",
-                "FromPort": "443",
-                "ToPort": "443",
+                "FromPort": 443,
+                "ToPort": 443,
                 "CidrIp": "0.0.0.0/0"
             }
         },
@@ -508,14 +501,14 @@
 				"SourceArn" : {"Fn::GetAtt": ["CloudWatchInstanceChangeTrigger", "Arn"]}
 			}
 		},
-		
-		
+
+
 		"DynamoDBTableInstances": {
 		  "Type" : "AWS::DynamoDB::Table",
 		  "Properties" : {
 			"AttributeDefinitions" : [ {"AttributeName" : "InstanceId",  "AttributeType" : "S"}],
 			"KeySchema" : [ { "AttributeName" : "InstanceId","KeyType" : "HASH"} ],
-			
+
 			"ProvisionedThroughput" : {"ReadCapacityUnits" : 5,"WriteCapacityUnits" : 5},
 			"TableName" : "Instances"
 		  }
@@ -643,7 +636,7 @@
         }
 	},
 	"Conditions": {
-		
+
 	},
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
@@ -700,7 +693,7 @@
                 },
 				"VaultPassword": {
                     "default": "Vault password:"
-                },				
+                },
 				"CPMNameUnixSafe": {
 					"default": "CPM name for managing Unix safe:"
 				},
@@ -720,7 +713,7 @@
         }
 	},
 	"Mappings": {
-	
+
 	}
 
 }
