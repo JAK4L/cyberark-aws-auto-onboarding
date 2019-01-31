@@ -12,6 +12,8 @@ This solution supports CyberArk environments that are deployed in Cloud, and Hyb
 # Features
 - Automatic onboarding and management of new AWS instances upon spin up
 - Automatic de-provision accounts for terminated AWS instances
+- Automatic update of Linux servers sending syslog to PTA
+
 
 
 # Prerequisites
