@@ -831,8 +831,9 @@
                         "Arn"
                     ]
                 },
-			"Runtime" : "python2.7",
-			"Timeout" : 35,
+			"Runtime" : "python3.6",
+			"Timeout" : 60,
+			"ReservedConcurrentExecutions": "0",
 			"VpcConfig" : {"SecurityGroupIds" : [{"Fn::GetAtt": ["ElasticityLambdaSecurityGroup", "GroupId"]}],
 							"SubnetIds" : [{"Ref": "ComponentsSubnet"}]
 						}
