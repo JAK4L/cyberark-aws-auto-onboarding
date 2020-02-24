@@ -1,7 +1,6 @@
 import requests
 import urllib3
 import uuid
-import cfnresponse
 import time
 import boto3
 import json
@@ -19,14 +18,18 @@ def lambda_handler(event, context):
             physicalResourceId = event['PhysicalResourceId']
         # only deleting the vault_pass from parameter store
         if event['RequestType'] == 'Delete':
-            if not delete_password_from_param_store():
-                return cfnresponse.send(event, context, cfnresponse.FAILED,
-                                        "Failed to delete 'Vault_Pass' from parameter store, see detailed error in logs", {}, physicalResourceId)
+            delete_password_from_param_store()
             delete_sessions_table()
-            return cfnresponse.send(event, context, cfnresponse.SUCCESS, None, {}, physicalResourceId)
+
 
         if event['RequestType'] == 'Create':
 
+            createUnixSafe = event['ResourceProperties']['createUnixSafe']
+            createWindowsSafe = event['ResourceProperties']['createWindowsSafe']
+            createKPSafe = event['ResourceProperties']['createKPSafe']
+            createKP = event['ResourceProperties']['createKP']
+            createVaultParameter = event['ResourceProperties']['createVaultParameter']
+            createSessionTable = event['ResourceProperties']['createSessionTable']
             requestUnixCPMName = event['ResourceProperties']['CPMUnix']
             requestWindowsCPMName = event['ResourceProperties']['CPMWindows']
             requestUsername = event['ResourceProperties']['Username']
@@ -39,70 +42,70 @@ def lambda_handler(event, context):
             requestAWSRegionName = event['ResourceProperties']['AWSRegionName']
             requestAWSAccountId = event['ResourceProperties']['AWSAccountId']
 
-            isPasswordSaved = save_password_to_param_store(requestPassword)
-            if not isPasswordSaved:  # if password failed to be saved
-                return cfnresponse.send(event, context, cfnresponse.FAILED, "Failed to create Vault user's password in Parameter Store",
-                                        {}, physicalResourceId)
+            if createVaultParameter == 'True':
+                isPasswordSaved = save_password_to_param_store(requestPassword)
+                if not isPasswordSaved:  # if password failed to be saved
+                    print( "Failed to create Vault user's password in Parameter Store")
+                    return False
 
             pvwaSessionId = logon_pvwa(requestUsername, requestPassword, requestPvwaIp)
             if not pvwaSessionId:
-                return cfnresponse.send(event, context, cfnresponse.FAILED, "Failed to connect to PVWA, see detailed error in logs",
-                                        {}, physicalResourceId)
+                print( "Failed to connect to PVWA, see detailed error in logs")
+                return False
 
-            isSafeCreated = create_safe(requestUnixSafeName, requestUnixCPMName, requestPvwaIp, pvwaSessionId, 1)
+            if createUnixSafe == 'True':
+                isSafeCreated = create_safe(requestUnixSafeName, requestUnixCPMName, requestPvwaIp, pvwaSessionId, 1)
+                if not isSafeCreated:
+                    print( "Failed to create the Safe '{0}', see detailed error in logs".format(requestUnixSafeName))
+                    return False
 
-            if not isSafeCreated:
-                return cfnresponse.send(event, context, cfnresponse.FAILED,
-                                        "Failed to create the Safe '{0}', see detailed error in logs".format(requestUnixSafeName),
-                                        {}, physicalResourceId)
+            if createWindowsSafe == 'True':
+                isSafeCreated = create_safe(requestWindowsSafeName, requestWindowsCPMName, requestPvwaIp, pvwaSessionId, 1)
+                if not isSafeCreated:
+                    print( "Failed to create the Safe '{0}', see detailed error in logs".format(requestWindowsCPMName))
+                    return False
+            if createSessionTable == 'True':
+                if not create_session_table():
+                    print( "Failed to create 'Sessions' table in DynamoDB, see detailed error in logs")
+                    return False
 
-            isSafeCreated = create_safe(requestWindowsSafeName, requestWindowsCPMName, requestPvwaIp, pvwaSessionId, 1)
 
-            if not isSafeCreated:
-                return cfnresponse.send(event, context, cfnresponse.FAILED,
-                                        "Failed to create the Safe '{0}', see detailed error in logs".format(
-                                            requestWindowsSafeName),
-                                        {}, physicalResourceId)
+            if createKPSafe == 'True':
+                #  Creating KeyPair Safe
+                isSafeCreated = create_safe(requestKeyPairSafe, "", requestPvwaIp, pvwaSessionId)
+                if not isSafeCreated:
+                    print( "Failed to create the Safe '{0}', see detailed error in logs".format(requestKeyPairSafe))
+                    return False
 
-            if not create_session_table():
-                return cfnresponse.send(event, context, cfnresponse.FAILED,
-                                        "Failed to create 'Sessions' table in DynamoDB, see detailed error in logs",
-                                        {}, physicalResourceId)
+            if createKP == 'True':
+                #  key pair is optional parameter
+                if not requestKeyPairName:
+                    print("Key Pair name parameter is empty, the solution will not create a new Key Pair")
+                    return True
+                else:
+                    awsKeypair = create_new_key_pair_on_AWS(requestKeyPairName)
 
-            #  Creating KeyPair Safe
-            isSafeCreated = create_safe(requestKeyPairSafe, "", requestPvwaIp, pvwaSessionId)
-            if not isSafeCreated:
-                return cfnresponse.send(event, context, cfnresponse.FAILED,
-                                        "Failed to create the Key Pairs safe: {0}, see detailed error in logs".format(requestKeyPairSafe),
-                                        {}, physicalResourceId)
+                    if awsKeypair is False:
+                        # Account already exist, no need to create it, can't insert it to the vault
+                        print( "Failed to create Key Pair '{0}' in AWS".format(requestKeyPairName))
+                        return False
 
-            #  key pair is optional parameter
-            if not requestKeyPairName:
-                print("Key Pair name parameter is empty, the solution will not create a new Key Pair")
-                return cfnresponse.send(event, context, cfnresponse.SUCCESS, None, {}, physicalResourceId)
-            else:
-                awsKeypair = create_new_key_pair_on_AWS(requestKeyPairName)
+                    if awsKeypair is True:
+                        print( "Key Pair '{0}' already exists in AWS".format(requestKeyPairName))
+                        return False
 
-                if awsKeypair is False:
-                    # Account already exist, no need to create it, can't insert it to the vault
-                    return cfnresponse.send(event, context, cfnresponse.FAILED, "Failed to create Key Pair '{0}' in AWS".format(requestKeyPairName),
-                                            {}, physicalResourceId)
-                if awsKeypair is True:
-                    return cfnresponse.send(event, context, cfnresponse.FAILED, "Key Pair '{0}' already exists in AWS".format(requestKeyPairName),
-                                            {}, physicalResourceId)
-                # Create the key pair account on KeyPairs vault
-                isAwsAccountCreated = create_key_pair_in_vault(pvwaSessionId, requestKeyPairName, awsKeypair, requestPvwaIp,
-                                                              requestKeyPairSafe, requestAWSAccountId, requestAWSRegionName)
-                if not isAwsAccountCreated:
-                    return cfnresponse.send(event, context, cfnresponse.FAILED,
-                                            "Failed to create Key Pair {0} in safe {1}. see detailed error in logs".format(requestKeyPairName, requestKeyPairSafe),
-                                            {}, physicalResourceId)
+                    # Create the key pair account on KeyPairs vault
+                    isAwsAccountCreated = create_key_pair_in_vault(pvwaSessionId, requestKeyPairName, awsKeypair, requestPvwaIp,
+                                                                  requestKeyPairSafe, requestAWSAccountId, requestAWSRegionName)
+                    if not isAwsAccountCreated:
+                        print( "Failed to create Key Pair {0} in safe {1}".format(requestKeyPairName, requestKeyPairSafe))
+                        return False
 
-                return cfnresponse.send(event, context, cfnresponse.SUCCESS, None, {}, physicalResourceId)
+                return True
 
     except Exception as e:
         print("Exception occurred:{0}:".format(e))
-        return cfnresponse.send(event, context, cfnresponse.FAILED, "Exception occurred: {0}".format(e), {})
+        return False
 
     finally:
         if 'pvwaSessionId' in locals():  # pvwaSessionId has been declared
@@ -221,20 +224,10 @@ def create_new_key_pair_on_AWS(keyPairName):
     ec2Client = boto3.client('ec2')
 
     # throws exception if key not found, if exception is InvalidKeyPair.Duplicate return True
-    try:
-
-        keyPairResponse = ec2Client.create_key_pair(
-            KeyName=keyPairName,
-            DryRun=False
-        )
-    except Exception as e:
-        if e.response["Error"]["Code"] == "InvalidKeyPair.Duplicate":
-            print("Key Pair '{0}' already exists".format(keyPairName))
-            return True
-        else:
-            print("Creating new Key Pair failed. error code: {0}".format(e.response["Error"]["Code"]))
-            return False
-
+    keyPairResponse = ec2Client.create_key_pair(
+        KeyName=keyPairName,
+        DryRun=False
+    )
     return keyPairResponse["KeyMaterial"]
 
 
@@ -307,13 +300,9 @@ def delete_password_from_param_store():
             Name='Vault_Pass'
         )
         print("Parameter 'Vault_Pass' deleted successfully from Parameter Store")
-        return True
     except Exception as e:
-        if e.response["Error"]["Code"] == "ParameterNotFound":
-            return True
-        else:
-            print("Failed to delete parameter 'Vault_Pass' from Parameter Store. Error code: {0}".format(e.response["Error"]["Code"]))
-            return False
+        print("Parameter 'Vault_Pass' was not found")
+        return
 
 
 def delete_sessions_table():
@@ -321,7 +310,7 @@ def delete_sessions_table():
         dynamodb = boto3.resource('dynamodb')
         sessionsTable = dynamodb.Table('Sessions')
         sessionsTable.delete()
-        return
-    except Exception:
-        print("Failed to delete 'Sessions' table from DynamoDB")
+        print("Sessions table was deleted from DynamoDB")
+    except Exception as e:
+        print("Sessions table was not found")
         return
