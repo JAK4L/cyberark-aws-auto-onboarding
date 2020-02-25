@@ -761,61 +761,6 @@
                 "ElasticityLambda"
                 ]
 		},
-		"CreateSafe": {
-            "Type": "AWS::CloudFormation::CustomResource",
-            "Version": "1.0",
-            "Properties": {
-                "ServiceToken": {
-                    "Fn::GetAtt": [
-                        "SafeHandlerLambda",
-                        "Arn"
-                    ]
-                },
-				"PVWAIP": {
-					"Ref": "PvwaIP"
-				},
-				"UnixSafeName": {
-					"Ref": "UnixSafeName"
-				},
-				"WindowsSafeName": {
-					"Ref": "WindowsSafeName"
-				},
-				"Username": {
-					"Ref": "VaultUser"
-				},
-				"Password": {
-					"Ref": "VaultPassword"
-				},
-    			"CPMUnix": {
-					"Ref": "CPMNameUnixSafe"
-				},
-				"CPMWindows": {
-					"Ref": "CPMNameWindowsSafe"
-				},
-				"KeyPairSafe": {
-					"Ref": "KeyPairsSafe"
-				},
-				"KeyPairName": {
-					"Ref": "KeyPairName"
-				},
-				"AWSRegionName": {
-					"Ref": "AWS::Region"
-				},
-				"AWSAccountId": {
-					"Ref": "AWS::AccountId"
-				}
-            },
-            "DependsOn": [
-                "SafeHandlerLambdaRole",
-                "SafehandlingLambdaPolicy",
-                "SafeHandlerLambda"
-            ],
-			"CreationPolicy": {
-                "ResourceSignal": {
-                    "Timeout": "PT2M"
-                }
-            }
-        },
 		"SafeHandlerLambda": {
 		  "Type" : "AWS::Lambda::Function",
 		  "Properties" : {
