@@ -131,25 +131,22 @@ def create_safe(safeName, cpmName, pvwaIP, sessionId, numberOfDaysRetention=7):
         }}
     """.format(safeName, cpmName, numberOfDaysRetention)
 
-    for i in range(0, 3):
-        createSafeRestResponse = call_rest_api_post(createSafeUrl, data, header)
 
-        if createSafeRestResponse.status_code == requests.codes.conflict:
-            print("The Safe '{0}' already exists".format(safeName))
-            return True
-        elif createSafeRestResponse.status_code == requests.codes.bad_request:
-            print("Failed to create safe '{0}', error 400: bad request".format(safeName))
-            return False
-        elif createSafeRestResponse.status_code == requests.codes.created:  # safe created
-            print("The Safe '{0}' was successfully created".format(safeName))
-            return True
-        else:  # Error creating safe, retry for 3 times, with 10 seconds between retries
-            print("Error creating safe, status code:{0}, will retry in 10 seconds".format(createSafeRestResponse.status_code))
-            if i == 3:
-                print("Failed to create safe after several retries, status code:{0}"
-                      .format(createSafeRestResponse.status_code))
-                return False
-        time.sleep(10)
+    createSafeRestResponse = call_rest_api_post(createSafeUrl, data, header)
+
+    if createSafeRestResponse.status_code == requests.codes.conflict:
+        print("The Safe '{0}' already exists".format(safeName))
+        return True
+    elif createSafeRestResponse.status_code == requests.codes.bad_request:
+        print("Failed to create safe '{0}', error 400: bad request".format(safeName))
+        return False
+    elif createSafeRestResponse.status_code == requests.codes.created:  # safe created
+        print("The Safe '{0}' was successfully created".format(safeName))
+        return True
+    else:  # Error creating safe
+        print("Error creating safe, status code:{0}, will retry in 10 seconds".format(createSafeRestResponse.status_code))
+        return False
+
 
 
 def logon_pvwa(username, password, pvwaUrl):
