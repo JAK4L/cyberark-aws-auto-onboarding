@@ -78,6 +78,7 @@ def lambda_handler(event, context):
                     return False
 
             if createKP == 'True':
+                time.sleep(15)
                 #  key pair is optional parameter
                 if not requestKeyPairName:
                     print("Key Pair name parameter is empty, the solution will not create a new Key Pair")
@@ -179,6 +180,7 @@ def logon_pvwa(username, password, pvwaUrl):
 
 def logoff_pvwa(pvwaUrl, connectionSessionToken):
     print('Start Logoff to PVWA REST API')
+    time.sleep(15)
     header = DEFAULT_HEADER
     header.update({"Authorization": connectionSessionToken})
     logoffUrl = 'https://{0}/PasswordVault/WebServices/auth/Cyberark/CyberArkAuthenticationService.svc/Logoff'.format(pvwaUrl)
